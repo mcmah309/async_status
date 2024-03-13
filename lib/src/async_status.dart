@@ -3,22 +3,27 @@ import 'dart:async';
 /// A utility for safely manipulating representing the state of asynchronous data.
 ///
 /// By using [AsyncStatus], you are guaranteed that you cannot forget to
-/// handle the loading/refreshing/error state of an asynchronous operation.
+/// handle the loading/reloading/error state of an asynchronous operation.
 ///
 /// - [AsyncStatus.guard], to simplify transforming a [Future] into an [AsyncStatus].
-sealed class AsyncStatus<T extends Object> {
+sealed class AsyncStatus<T> {
 
   /// {@template aysncstatus.data}
   /// Creates an [AsyncStatus] with a data.
   /// {@endtemplate}
-  const factory AsyncStatus.data(T data) = AsyncData<T>;
+  const factory AsyncStatus.data(T value) = AsyncData<T>;
 
   /// {@template aysncstatus.loading}
   /// Creates an [AsyncStatus] in loading state.
   ///
   /// Prefer always using this constructor with the `const` keyword.
   /// {@endtemplate}
-  const factory AsyncStatus.loading([T data]) = AsyncLoading<T>;
+  const factory AsyncStatus.loading() = AsyncLoading<T>;
+
+  /// {@template aysncstatus.reloading}
+  /// Creates an [AsyncStatus] in reloading state. Data exists and is being refreshed.
+  /// {@endtemplate}
+  const factory AsyncStatus.reloading(T value) = AsyncReloading<T>;
 
   /// {@template aysncstatus.error_ctor}
   /// Creates an [AsyncStatus] in the error state.
@@ -80,7 +85,7 @@ sealed class AsyncStatus<T extends Object> {
   ///   );
   /// }
   /// ```
-  static Future<AsyncStatus<T>> guard<T extends Object>(
+  static Future<AsyncStatus<T>> guard<T>(
     FutureOr<T> Function() future, [
     bool Function(Object)? isValidErr,
   ]) async {
@@ -106,14 +111,15 @@ sealed class AsyncStatus<T extends Object> {
     required R Function(AsyncData<T> data) data,
     required R Function(AsyncError<T> error) error,
     required R Function(AsyncLoading<T> loading) loading,
+    required R Function(AsyncReloading<T> reloading) reloading,
   });
 
-  AsyncStatus<R> cast<R extends Object>();
-
+  /// Casts the [AsyncStatus] to a different type.
+  AsyncStatus<R> cast<R>();
 }
 
 /// {@macro aysncstatus.data}
-final class AsyncData<T extends Object> implements AsyncStatus<T> {
+final class AsyncData<T> implements AsyncStatus<T> {
   /// {@macro aysncstatus.data}
   const AsyncData(this.data);
 
@@ -124,40 +130,91 @@ final class AsyncData<T extends Object> implements AsyncStatus<T> {
     required R Function(AsyncData<T> data) data,
     required R Function(AsyncError<T> error) error,
     required R Function(AsyncLoading<T> loading) loading,
+    required R Function(AsyncReloading<T> reloading) reloading,
   }) {
     return data(this);
   }
 
   @override
-  AsyncStatus<R> cast<R extends Object>() { //todo test
+  AsyncStatus<R> cast<R>() { //todo test
     return this as AsyncStatus<R>;
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AsyncData && data == other.data;
+
+  @override
+  int get hashCode => data.hashCode;
 }
 
 /// {@macro aysncstatus.loading}
-final class AsyncLoading<T extends Object> implements AsyncStatus<T> {
+final class AsyncLoading<T> implements AsyncStatus<T> {
   /// {@macro aysncstatus.loading}
-  const AsyncLoading([this.data]);
-
-  final T? data;
+  const AsyncLoading();
 
   @override
   R match<R>({
     required R Function(AsyncData<T> data) data,
     required R Function(AsyncError<T> error) error,
     required R Function(AsyncLoading<T> loading) loading,
+    required R Function(AsyncReloading<T> reloading) reloading,
   }) {
     return loading(this);
   }
 
   @override
-  AsyncLoading<R> cast<R extends Object>() {
+  AsyncLoading<R> cast<R>() {
     return this as AsyncLoading<R>;
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || other is AsyncLoading;
+  
+  @override
+  int get hashCode => 0;
+}
+
+/// {@macro aysncstatus.reloading}
+final class AsyncReloading<T> implements AsyncStatus<T> {
+  /// {@macro aysncstatus.reloading}
+  const AsyncReloading(this.data);
+
+  final T data;
+
+  @override
+  R match<R>({
+    required R Function(AsyncData<T> data) data,
+    required R Function(AsyncError<T> error) error,
+    required R Function(AsyncLoading<T> loading) loading,
+    required R Function(AsyncReloading<T> reloading) reloading,
+  }) {
+    return reloading(this);
+  }
+
+  @override
+  AsyncLoading<R> cast<R>() {
+    return this as AsyncLoading<R>;
+  }
+
+  /// Transition to [AsyncData] state.
+  AsyncData<T> toData() {
+    return AsyncData(data);
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AsyncReloading && data == other.data;
+  
+  @override
+  int get hashCode => data.hashCode;
 }
 
 /// {@macro aysncstatus.error_ctor}
-final class AsyncError<T extends Object> implements AsyncStatus<T> {
+final class AsyncError<T> implements AsyncStatus<T> {
   /// {@macro aysncstatus.error_ctor}
   const AsyncError(this.error, [this.stackTrace]);
 
@@ -170,13 +227,23 @@ final class AsyncError<T extends Object> implements AsyncStatus<T> {
     required R Function(AsyncData<T> data) data,
     required R Function(AsyncError<T> error) error,
     required R Function(AsyncLoading<T> loading) loading,
-
+    required R Function(AsyncReloading<T> reloading) reloading,
   }) {
     return error(this);
   }
   
   @override
-  AsyncStatus<R> cast<R extends Object>() {
+  AsyncStatus<R> cast<R>() {
     return this as AsyncStatus<R>;
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AsyncError &&
+          error == other.error &&
+          stackTrace == other.stackTrace;
+
+  @override
+  int get hashCode => error.hashCode ^ stackTrace.hashCode;
 }
