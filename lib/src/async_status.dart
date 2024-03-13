@@ -129,6 +129,11 @@ final class AsyncData<T> extends AsyncStatus<T> {
 
   final T data;
 
+  /// Transition to [AsyncReloading] state.
+  AsyncReloading<T> toReloading() {
+    return AsyncReloading(data);
+  }
+
   @override
   AsyncData<R> cast<R>() {
     return this as AsyncData<R>;
