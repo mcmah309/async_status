@@ -77,8 +77,7 @@ void main(){
   test("Can use switch expresion",(){
     final AsyncStatus<int> status = AsyncStatus.loading();
     final int val = switch(status){
-      AsyncReloading<int>(:final data) || AsyncReloading<int>(:final data) => data,
-      AsyncData<int>(:final data) => data,
+      AsyncReloading<int>(:final data) || AsyncData<int>(:final data) => data,
       AsyncError(error:final _) => 0,
       AsyncLoading() => -1,
     };
