@@ -1,7 +1,7 @@
 name: async_status
-description: An async status
-version: 0.0.1
-# repository: https://github.com/my_org/my_repo
+description: "An async status (aka async value) for handling asynchronous states with futures and streams. States: data, error, loading, reloading"
+version: 0.1.0
+repository: https://github.com/mcmah309/async_status
 
 environment:
   sdk: ^3.0.0
